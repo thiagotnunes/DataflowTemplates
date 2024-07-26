@@ -49,6 +49,8 @@ import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.base.Precondit
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.google.cloud.teleport.v2.source.reader.io.jdbc.iowrapper.config.JdbcIOWrapperConfig.builderWithMySqlDefaults;
+
 /** Place perform pipeline level orchestration, scheduling and tuning operations. */
 public class PipelineController {
 
@@ -205,6 +207,7 @@ public class PipelineController {
               ReaderImpl.of(
                   JdbcIoWrapper.of(
                       OptionsToConfigBuilder.getJdbcIOWrapperConfig(
+                          builderWithMySqlDefaults(),
                           List.of(srcTable),
                           null,
                           shard.getHost(),

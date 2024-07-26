@@ -16,6 +16,7 @@
 package com.google.cloud.teleport.v2.options;
 
 import static com.google.cloud.teleport.v2.source.reader.io.jdbc.iowrapper.config.JdbcIOWrapperConfig.builderWithMySqlDefaults;
+import static com.google.cloud.teleport.v2.source.reader.io.jdbc.iowrapper.config.JdbcIOWrapperConfig.builderWithPostgreSQLDefaults;
 
 import com.google.cloud.teleport.v2.source.reader.auth.dbauth.LocalCredentialsProvider;
 import com.google.cloud.teleport.v2.source.reader.io.jdbc.iowrapper.config.JdbcIOWrapperConfig;
@@ -31,6 +32,53 @@ import org.slf4j.LoggerFactory;
 
 public final class OptionsToConfigBuilder {
   private static final Logger LOG = LoggerFactory.getLogger(OptionsToConfigBuilder.class);
+
+  public static final class PostgreSQL {
+    private static String extractDbFromURL(String sourceDbUrl) {
+      URI uri;
+      try {
+        // Strip off the prefix 'jdbc:' which the library cannot handle.
+        uri = new URI(sourceDbUrl.substring(5));
+      } catch (URISyntaxException e) {
+        throw new RuntimeException(String.format("Unable to parse url: %s", sourceDbUrl), e);
+      }
+      // Remove '/' before returning.
+      return uri.getPath().substring(1);
+    }
+
+    public static JdbcIOWrapperConfig configWithPostgreSQLDefaultsFromOptions(
+            SourceDbToSpannerOptions options,
+            List<String> tables,
+            String shardId,
+            Wait.OnSignal<?> waitOn) {
+      String sourceDbURL = options.getSourceDbURL();
+      String dbName = extractDbFromURL(sourceDbURL);
+      String username = options.getUsername();
+      String password = options.getPassword();
+
+      String jdbcDriverClassName = options.getJdbcDriverClassName();
+      String jdbcDriverJars = options.getJdbcDriverJars();
+      long maxConnections =
+              options.getMaxConnections() > 0 ? (long) (options.getMaxConnections()) : 0;
+      Integer numPartitions = options.getNumPartitions();
+
+      return getJdbcIOWrapperConfig(
+              builderWithPostgreSQLDefaults(),
+              tables,
+              sourceDbURL,
+              null,
+              0,
+              username,
+              password,
+              dbName,
+              shardId,
+              jdbcDriverClassName,
+              jdbcDriverJars,
+              maxConnections,
+              numPartitions,
+              waitOn);
+    }
+  }
 
   public static final class MySql {
 
@@ -63,6 +111,7 @@ public final class OptionsToConfigBuilder {
       Integer numPartitions = options.getNumPartitions();
 
       return getJdbcIOWrapperConfig(
+          builderWithMySqlDefaults(),
           tables,
           sourceDbURL,
           null,
@@ -80,6 +129,7 @@ public final class OptionsToConfigBuilder {
   }
 
   public static JdbcIOWrapperConfig getJdbcIOWrapperConfig(
+      JdbcIOWrapperConfig.Builder builder,
       List<String> tables,
       String sourceDbURL,
       String host,
@@ -93,7 +143,6 @@ public final class OptionsToConfigBuilder {
       long maxConnections,
       Integer numPartitions,
       Wait.OnSignal<?> waitOn) {
-    JdbcIOWrapperConfig.Builder builder = builderWithMySqlDefaults();
     builder =
         builder
             .setSourceSchemaReference(SourceSchemaReference.builder().setDbName(dbName).build())

@@ -36,6 +36,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class PostgreSQLDialectAdapter implements DialectAdapter {
+
+  public enum PostgreSQLVersion {
+    DEFAULT,
+  }
+
   private static final Logger logger = LoggerFactory.getLogger(PostgreSQLDialectAdapter.class);
 
   // SQLState / Error codes
@@ -54,6 +59,12 @@ public class PostgreSQLDialectAdapter implements DialectAdapter {
   // Errors
   private final Counter schemaDiscoveryErrors =
       Metrics.counter(JdbcSourceRowMapper.class, MetricCounters.READER_SCHEMA_DISCOVERY_ERRORS);
+
+  private PostgreSQLVersion version;
+
+  public PostgreSQLDialectAdapter(PostgreSQLVersion version) {
+    this.version = version;
+  }
 
   @Override
   public ImmutableList<String> discoverTables(
